@@ -7,12 +7,12 @@
 /// mass in kg 
 /// Speed in km/s
 
-// TODO : Le system de gravitation est pas cool
-
 #define LOG(x) {std::cout << "[INFO]: " << x << std::endl;} 
 
 const float sizeScale = 10000;
 const float distanceScale = 500000;
+
+const float simSpeed = 10000000000000;
 
 constexpr int HEIGHT = 800;
 constexpr int WIDTH = 1500;
@@ -30,21 +30,22 @@ public:
     sf::Vector2f vel;
     int id = 0;
 
-    GravitySource(int& currentId, const char* name, sf::Vector2f pos, sf::Vector2f vel, float mass, float size) :
+    GravitySource(int& currentId, const char* name, sf::Vector2f pos, sf::Vector2f vel, float mass, float size, sf::Color color) :
         vel{ vel }, mass{ mass }, size{ size }, id{ currentId }, name{ name }
     {
         currentId++;
+        this->mass = mass / pow(10, 20);
         float radius = size / sizeScale;
-        this->pos = sf::Vector2f(pos.x - radius, pos.y - radius);
+        this->pos = sf::Vector2f((pos.x / distanceScale) - radius, (pos.y / distanceScale) - radius);
         this->pos += sf::Vector2f(WIDTH / 2, HEIGHT / 2); // Center the circle
         shape.setRadius(size / sizeScale);
         shape.setPosition(pos);
-        shape.setFillColor(sf::Color::White);
+        shape.setFillColor(color);
 
         LOG(name << " source created successfuly !", "");
         LOG("\t id: " << id);
-        LOG("\t size: " << size << "km" << " (" << size / sizeScale << "km with scale)");
-        LOG("\t mass: " << mass << "kg" << " (" << mass / sizeScale << "kg with scale)");
+        LOG("\t size: " << size << "km" << " (radius of " << size / sizeScale << "pix with scale)");
+        LOG("\t mass: " << mass << "kg" << " (" << mass * pow(10, 20) << " with scale)");
     }
 
     sf::Color SetColorBaseOnVelocity()
@@ -85,24 +86,23 @@ public:
             // Getting distance
             float distX = source.GetPos().x - pos.x;
             float distY = source.GetPos().y - pos.y;
+
+
             float distance = sqrt(distX * distX + distY * distY);
 
-            float inverseDist = 1 / distance;
+            float x = (source.pos.x - pos.x) / distance;
+            float y = (source.pos.y - pos.y) / distance;
+            sf::Vector2f lookAtVector(x, y);
 
-            float normalisedX = inverseDist * distX;
-            float normalisedY = inverseDist * distY;
+            lookAtVector *= GetGravPull(source.mass, distance);
 
-            float inverseSquareDropoff = inverseDist * inverseDist;
+            vel.x += lookAtVector.x * simSpeed / mass / sizeScale;
+            vel.y += lookAtVector.y * simSpeed / mass / sizeScale;
 
-            //float accelerationX = GetGravAttraction(source.mass, (150 * pow(10, 6)) / distanceScale);
-            //float accelerationY = GetGravAttraction(source.mass, (150 * pow(10, 6)) / distanceScale);
-            float accelerationX = normalisedX * source.GetStrenght() * inverseSquareDropoff;
-            float accelerationY = normalisedY * source.GetStrenght() * inverseSquareDropoff;
-            vel.x += accelerationX;
-            vel.y += accelerationY;
+            pos.x += vel.x / distanceScale;
+            pos.y += vel.y / distanceScale;
 
-            pos.x += vel.x;
-            pos.y += vel.y;
+            //LOG(name << " x: " << pos.x << " y: " << pos.y);
 
         }
     }
@@ -113,9 +113,10 @@ public:
         return mass;
     }
 
-    float GetGravAttraction(float m2, float distance)
+    float GetGravPull(float m2, float distance)
     {
-        return gravitationalConst * (((mass / sizeScale) * (m2 / sizeScale)) / distance);
+        float force = gravitationalConst * (((mass) * (m2)) / (distance * distance));
+        return force;
     }
 };
 
@@ -130,20 +131,19 @@ int main()
     const long float earthMass = (5.972f * pow(10, 24));
     const long float earthSize = (12.7f * pow(10, 3));
 
-    const double earthSunDist = (150 * pow(10, 6)) / distanceScale;
+    const double earthSunDist = (150 * pow(10, 6));
 
     LOG("Using a scale of 1/" << sizeScale << " for size");
     LOG("Using a scale of 1/" << distanceScale << " for distance");
-    LOG("earth <-> sun distance: " << earthSunDist << "km");
+    LOG("earth <-> sun distance: " << earthSunDist << "km" << " (" << earthSunDist/distanceScale << "pix with scale)");
 
 
     sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Jen gravité");
-    window.setFramerateLimit(60);
+    window.setFramerateLimit(90);
 
     std::vector<GravitySource> sources;
-    // Sun
-    sources.push_back(GravitySource(currentId, "Sun", sf::Vector2f(0, 0), sf::Vector2f(0, 0), 1.4f * 100000, sunSize));
-    sources.push_back(GravitySource(currentId, "Earth", sf::Vector2f(0, earthSunDist), sf::Vector2f(15, 0), 0, earthSize));
+    sources.push_back(GravitySource(currentId, "Sun", sf::Vector2f(0, 0), sf::Vector2f(0, 0), sunMass, sunSize, sf::Color::Yellow));
+    sources.push_back(GravitySource(currentId, "Earth", sf::Vector2f(0, earthSunDist), sf::Vector2f(10, 0), earthMass, earthSize, sf::Color::Blue));
     // 29.78f*pow(10,3)
 
 
@@ -169,13 +169,11 @@ int main()
         for (GravitySource& source : sources)
         {
             source.UpdatePhysics(sources);
-            source.SetColorBaseOnVelocity();
+            //source.SetColorBaseOnVelocity();
         }
 
         window.display();
     }
-
-
 
     return 0;
 }
