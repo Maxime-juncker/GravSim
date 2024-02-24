@@ -12,7 +12,7 @@
 const float sizeScale = 10000;
 const float distanceScale = 500000;
 
-const float simSpeed = 10000000000000;
+const float simSpeed = 100000000;
 
 constexpr int HEIGHT = 800;
 constexpr int WIDTH = 1500;
@@ -45,7 +45,7 @@ public:
         LOG(name << " source created successfuly !", "");
         LOG("\t id: " << id);
         LOG("\t size: " << size << "km" << " (radius of " << size / sizeScale << "pix with scale)");
-        LOG("\t mass: " << mass << "kg" << " (" << mass * pow(10, 20) << " with scale)");
+        LOG("\t mass: " << mass << "kg");
     }
 
     sf::Color SetColorBaseOnVelocity()
@@ -94,7 +94,7 @@ public:
             float y = (source.pos.y - pos.y) / distance;
             sf::Vector2f lookAtVector(x, y);
 
-            lookAtVector *= GetGravPull(source.mass, distance);
+            lookAtVector *= GetGravPull(source.mass, distance) * distanceScale;
 
             vel.x += lookAtVector.x * simSpeed / mass / sizeScale;
             vel.y += lookAtVector.y * simSpeed / mass / sizeScale;
@@ -143,7 +143,7 @@ int main()
 
     std::vector<GravitySource> sources;
     sources.push_back(GravitySource(currentId, "Sun", sf::Vector2f(0, 0), sf::Vector2f(0, 0), sunMass, sunSize, sf::Color::Yellow));
-    sources.push_back(GravitySource(currentId, "Earth", sf::Vector2f(0, earthSunDist), sf::Vector2f(10, 0), earthMass, earthSize, sf::Color::Blue));
+    sources.push_back(GravitySource(currentId, "Earth", sf::Vector2f(0, earthSunDist), sf::Vector2f(1999999, 0), earthMass, earthSize, sf::Color::Blue));
     // 29.78f*pow(10,3)
 
 
